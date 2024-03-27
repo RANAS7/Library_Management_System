@@ -1,6 +1,12 @@
 
 import javax.swing.JOptionPane;
-
+import java.sql.SQLException;
+import java.util.logging.Logger;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.logging.Level;
+import java.sql.DriverManager;
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -11,12 +17,30 @@ import javax.swing.JOptionPane;
  * @author user
  */
 public class Login extends javax.swing.JFrame {
+    
+     private static final String DB_URL = "jdbc:mysql://localhost:3306/library";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "123456789";
 
     /**
      * Creates new form Login
      */
     public Login() {
         initComponents();
+    }
+    
+    Connection con; 
+    PreparedStatement pst;
+    ResultSet rs;
+    
+     public void Connect()
+    {
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+            con = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            } catch (ClassNotFoundException | SQLException ex) {
+            Logger.getLogger(Books.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
     }
 
     /**
@@ -36,6 +60,8 @@ public class Login extends javax.swing.JFrame {
         login = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+        setLocation(new java.awt.Point(0, 0));
 
         jLabel1.setFont(new java.awt.Font("Segoe UI Black", 1, 24)); // NOI18N
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -112,18 +138,46 @@ public class Login extends javax.swing.JFrame {
 
     private void loginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loginActionPerformed
 String User = username.getText();  
-String Pass = password.getText();
+    String Pass = password.getText();
 
-if(User.equals("RANAS7") && Pass.equals("123456")){
-    JOptionPane.showMessageDialog(this, "Login Successfull ");
-    Dashboard dsh = new Dashboard();
-    this.hide();
-    dsh.setVisible(true);
-}
-else{
-    JOptionPane.showMessageDialog(this, "Username or Paswrod do not match");
-    username.requestFocus();
-}
+    try {
+        Connect(); // Establish database connection
+
+        // Prepare the SQL statement to retrieve admin credentials
+        PreparedStatement pst = con.prepareStatement("SELECT * FROM admin WHERE username = ?");
+        pst.setString(1, User);
+        
+        // Execute the query
+        ResultSet rs = pst.executeQuery();
+
+        // Check if there is a row returned
+        if (rs.next()) {
+            // Retrieve password from the database for the provided username
+            String storedPassword = rs.getString("password");
+
+            // Compare the retrieved password with the password entered by the user
+            if (Pass.equals(storedPassword)) {
+                // If username and password match, login is successful
+                JOptionPane.showMessageDialog(this, "Login Successful");
+                Dashboard dsh = new Dashboard();
+                this.dispose(); // Close the current login window
+                dsh.setVisible(true);
+            } else {
+                // If passwords do not match, display an error message
+                JOptionPane.showMessageDialog(this, "Username or Password do not match");
+                username.requestFocus();
+            }
+        } else {
+            // If no row is returned for the provided username, display an error message
+            JOptionPane.showMessageDialog(this, "Username not found");
+            username.requestFocus();
+        }
+
+    } catch (SQLException ex) {
+        // Handle SQL exceptions
+        Logger.getLogger(Login.class.getName()).log(Level.SEVERE, null, ex);
+        JOptionPane.showMessageDialog(this, "Database Error");
+    }
     }//GEN-LAST:event_loginActionPerformed
 
     /**
